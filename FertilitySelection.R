@@ -58,8 +58,8 @@ fertility = function(B,DOB,interview,W) {                                       
   events   = exposure
   Age      = matrix(NA, nrow = length(x) - 1, ncol = 1)
   for (i in 1:(length(x) - 1)) {
-    A             = pmax(DOB %m+% years(x[i]), T1)
-    O             = pmin(DOB %m+% years(x[i + 1]), T2)
+    A             = pmin(pmax(DOB %m+% years(x[i]), T1), interview)
+    O             = pmin(pmin(DOB %m+% years(x[i + 1]), T2), interview)
     exposure[i, ] = matrix(pmax(time_length(interval(A, O), "years"),0), nrow = 1) %*% W
     events[i, ]   = matrix(rowSums((a >= x[i])*(a < x[i + 1])*b, na.rm = TRUE), nrow = 1) %*% W
     Age[i]        = (x[i] + x[i + 1])/2
