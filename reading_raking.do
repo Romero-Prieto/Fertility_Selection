@@ -5,23 +5,33 @@ tempfile   tempBR
 tempfile   tempIR
 
 
-local      pATh         = "/Users/lshjr3/Documents/FertilitySelection/Data"     /*Adjust path*/
-local      DHS          = "BF81 GH8C MW81"
+local      pATh         = "/Users/lshjr3/Documents/FertilitySelection"     /*Adjust path*/
+local      DHS          = "AM72 AO81 BD81 BF81 BJ71 BU71 CD81 CI81 CM71 ET71 GA71 GH8C GM81 GN71 HT71 IA7E ID71 JO81 KE8C KH82 LB7A LS81 MD81 ML8A MR71 MV71 MW81 MZ81 NG8B NP82 PG71 PH82 PK71 RW81 SL7A SN8S TJ81 TL71 TZ82 UG7B ZA71 ZM81 ZW72"
 
 clear
 generate   survey       = ""
-save      `lISt', replace
-local      vARsIR       = "caseid v000 v001 v002 v003 v005 v006 v007 v008 v016 v011 v012 v021 v023 v024 v025 v018 v101 v102 v106 v501 v169a v190 v313 b1_* b2_* b17_* v623 v249 v312 v364 v613 v602" /*Variables from Individual Recode, i.e., women 15-49.*/
+save      `lISt', replace                                                       /*Makes a list of DHS samples.*/
+local      vARsIR       = "caseid v000 v001 v002 v003 v005 v006 v007 v008 v016 v011 v012 v021 v023 v024 v025 v018 v101 v102 v106 v501 v169* v190 v249 v313 b1_* b2_* b17_* v623 v312 v364 v613 v602" /*Variables from Individual Recode, i.e., women 15-49.*/
+use       `vARsIR' in 1/1 using "`pATh'/Data/GHIR8CFL.DTA", clear                    /*Follows the same approach with the IR file.*/
+drop       in 1
+save      `tempIR', replace
 
 local      vARsPR       = "hhid hvidx hv001 hv002 hv003 hv005 hv023 hv101 hv102 hv103 hv104 hv105 hv106 hv107 hv112 hv114 hv201 hv206 hv215" /*Variables from Household Member Recode, i.e., all family members plus household's characteristics.*/
 
 
 foreach svy of local DHS {
 	/* Women 15-49 */
+	cls
+	dis "`svy'"
 	local      name           = substr("`svy'",1,2) + "IR" + substr("`svy'",3,4) + "FL.DTA"
-	use       `vARsIR' using "`pATh'/`name'", clear                             
-	generate   DOB            = mdy(v011 - floor((v011 - 1)/12)*12,1,floor((v011 - 1)/12) + 1900)
+	use        caseid v* b1_* b2_* b17_* using "`pATh'/Data/`name'", clear
+	merge 1:1  caseid v002 v012 using `tempIR', nogenerate noreport nolabel keep(master) /*Brings the name of those variables not in the sample.*/
+	keep      `vARsIR'                                                          /*Keeps just the variables of the list.*/
+	drop if    v169a         == .                                               /*e.g., IA7E questions on mobile ownership are only for a sample.*/
+	drop if    v005          == 0                                               /*e.g., MW81 (refugee's weights have a different variable) PK71*/
+		
 	generate   W              = v005/1000000                                    /*weights*/
+	generate   DOB            = mdy(v011 - floor((v011 - 1)/12)*12,1,floor((v011 - 1)/12) + 1900) /*Day of birth is not available, and the first of the month is assumed.*/	
 	sum        W 
 	replace    W              = W/r(mean)
 	generate   respondent     = v003
@@ -37,7 +47,6 @@ foreach svy of local DHS {
 	generate   age            = v012
 	generate   ageG           = 5*floor(age/5)
 	generate   mobile         = v169a
-	recode     mobile      (. = 0)
 	generate   interview      = mdy(v006,v016,v007)
 	generate   wealth_index   =	v190
 	generate   menarche_age   = v249
@@ -48,14 +57,16 @@ foreach svy of local DHS {
 	generate   fecund         = 1 - min(v623,1)   + 1    
 	generate   ideal_number   = v613
 	
-	/* Dates of Birth */
+	/* Date of Birth */
 	forvalues i = 1(1)20 {
 		local      s         = substr("0" + "`i'",-2,.)
 		generate   B_`i'     = mdy(b1_`s',b17_`s',b2_`s')
 		}	
 	
 	local      vAr            = "caseid interview respondent UR Region DOB W cluster household strata Region UR Education Marital age ageG mobile wealth_index menarche_age any_usage modern_usage no_use_no_inte another_child fecund ideal_number B_*"
-	save      `temp', replace	
+	save      `temp', replace
+	
+	/* Consecutive region numeration */
 	contract   Region        
 	generate   R              = _n
 	keep       Region R
@@ -70,12 +81,13 @@ foreach svy of local DHS {
 
 	/* All household members & household's characteristics */
 	local      name           = substr("`svy'",1,2) + "PR" + substr("`svy'",3,4) + "FL.DTA"
-	use       `vARsPR' using "`pATh'/`name'", clear                             
+	use       `vARsPR' using "`pATh'/Data/`name'", clear                             
 	generate   cluster        = hv001
 	generate   household      = hv002
 	generate   respondent     = hvidx
 	
 	generate   Electricity    = hv206
+	recode     Electricity (. = 0)
 	generate   Roofing        = 0
 	recode     Roofing     (0 = 1)    if hv215 == 31 | hv215 == 33 | hv215 == 34 | hv215 == 35 | hv215 == 36 /*good material excluding wood*/
 	generate   Water          = 0
@@ -99,7 +111,7 @@ foreach svy of local DHS {
 	/* Raking */	
 	generate   Total          = 1
 	tabulate   Total [aw = W], matcell(Total)
-	local      rep_lISt       = "GO UR Region householdS Education Electricity fecund another_child"
+	local      rep_lISt       = "GO UR Region householdS Education Electricity fecund another_child no_use_no_inte"
 	local      alpha          = 0.10
 	local      rep_variable   = ""
 	local      rep_totals     = "_cons = 10000"
@@ -127,5 +139,17 @@ foreach svy of local DHS {
 	merge m:1  cluster household respondent using `temp', noreport nogenerate
 	order      survey caseid cluster household respondent W WR DOB	
 	sort       survey caseid cluster household respondent
-	export     delimited using "`pATh'/`svy'.csv", replace
+	export     delimited using "`pATh'/Data/`svy'.csv", replace
+
+	collapse  (mean) mobile [aw = W], by(survey)
+	append     using `lISt'
+	save      `lISt', replace	
 	}
+
+use       `lISt', clear
+sort       survey
+generate   DHS          = substr(survey,1,2)
+merge m:1  DHS using "`pATh'/DHS_code.dta", nogenerate noreport keep(master match)
+drop       DHS
+order      country survey
+export     delimited using "`pATh'/lISt.csv", replace
