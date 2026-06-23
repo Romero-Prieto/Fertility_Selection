@@ -5,8 +5,8 @@ tempfile   tempBR
 tempfile   tempIR
 
 
-local      pATh         = "/Users/lshjr3/Documents/FertilitySelection"     /*Adjust path*/
-local      DHS          = "AM72 AO81 BD81 BF81 BJ71 BU71 CD81 CI81 CM71 ET71 GA71 GH8C GM81 GN71 HT71 IA7E ID71 JO81 KE8C KH82 LB7A LS81 MD81 ML8A MR71 MV71 MW81 MZ81 NG8B NP82 PG71 PH82 PK71 RW81 SL7A SN8S TJ81 TL71 TZ82 UG7B ZA71 ZM81 ZW72"
+local      pATh         = "/Users/lshjr3/Documents/FertilitySelection"          /*Adjust path*/
+local      DHS          = "AM72 AO81 BD81 BF81 BJ71 BU71 CD81 CI81 CM71 ET71 GA71 GH8C GM81 GN71 HT71 IA7E ID71 JO81 KE8C KH82 LB7A LS81 MD81 ML8A MR71 MV71 MW81 MZ81 NG8B PG71 NP82 PH82 PK71 RW81 SL7A SN8S TJ81 TL71 TZ82 UG7B ZA71 ZM81 ZW72"
 
 clear
 generate   survey       = ""
@@ -48,6 +48,10 @@ foreach svy of local DHS {
 	generate   ageG           = 5*floor(age/5)
 	generate   mobile         = v169a
 	generate   interview      = mdy(v006,v016,v007)
+	forvalues i = 1(1)5 {                                                       /*to fix misreported dates (e.g., Timor-Leste) or to deal with the Nepali calendar.*/ 
+		replace    interview = mdy(v006,v016 - `i',v007) + `i' if interview == .
+		}
+	
 	generate   wealth_index   =	v190
 	generate   menarche_age   = v249
 	generate   any_usage      = min(v312,1)       + 1
@@ -61,6 +65,10 @@ foreach svy of local DHS {
 	forvalues i = 1(1)20 {
 		local      s         = substr("0" + "`i'",-2,.)
 		generate   B_`i'     = mdy(b1_`s',b17_`s',b2_`s')
+		forvalues j = 1(1)5 {                                                   /*to fix misreported dates (e.g., Timor-Leste) or to deal with the Nepali calendar.*/
+			replace    B_`i'     = mdy(b1_`s',b17_`s' - `j',b2_`s') + `j' if B_`i' == .
+			}
+		replace    B_`i'     = mdy(b1_`s',15,b2_`s') if B_`i' == .              /*to impute day of birth in case it is not collected (e.g., Indonesia).*/
 		}	
 	
 	local      vAr            = "caseid interview respondent UR Region DOB W cluster household strata Region UR Education Marital age ageG mobile wealth_index menarche_age any_usage modern_usage no_use_no_inte another_child fecund ideal_number B_*"
@@ -140,7 +148,7 @@ foreach svy of local DHS {
 	order      survey caseid cluster household respondent W WR DOB	
 	sort       survey caseid cluster household respondent
 	export     delimited using "`pATh'/Data/`svy'.csv", replace
-
+	
 	collapse  (mean) mobile [aw = W], by(survey)
 	append     using `lISt'
 	save      `lISt', replace	
