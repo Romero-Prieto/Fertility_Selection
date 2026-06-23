@@ -3,7 +3,8 @@ library(stringr)                                                                
 library(ggplot2)                                                                #To draw plots.
 library(lubridate)                                                              #To work with continuous time data.
 library(dplyr)                                                                  #To load the library dplyr.
-library(writexl)                                                                #To export data as an excel file.
+library(readr)                                                                  #To import/export data from a .csv file.
+
 
 pATh                 = "/Users/lshjr3/Documents/FertilitySelection/"            #To define the path.
 lISt                 = read.csv(paste0(pATh,"lISt.csv"))                        #To read all survey names.
@@ -91,4 +92,4 @@ for (svy in DHS) {
   
   Table_TFR            = rbind(Table_TFR, c(svy, mobile, all[["TFR"]], selected[["TFR"]], poststratified[["TFR"]]))
 }
-write_xlsx(data.frame(Table_TFR), paste0(pATh,"Table_TFR.xlsx"))
+write_csv(data.frame(Table_TFR), paste0(pATh,"Table_TFR.csv"))
