@@ -6,9 +6,11 @@ library(dplyr)                                                                  
 library(readr)                                                                  #To import/export data from a .csv file.
 
 
+set.seed(0)                                                                     #To set the seed for random number generation.
 pATh                 = "/Users/lshjr3/Documents/FertilitySelection/"            #To define the path.
 lISt                 = read.csv(paste0(pATh,"lISt.csv"))                        #To read all survey names.
 DHS                  = lISt[["survey"]]                                         #To retain only the name of the survey.
+
 
 bootstrapping = function(data,structure,R) {                                    #To generate the bootstrap frequency weights. If structure = c("strata", "cluster", "woman"), the function resamples clusters within each strata and women within each cluster.  
   data[["woman"]] = 1:nrow(data)
@@ -68,7 +70,7 @@ Table_TFR            = matrix(NA, nrow = 0, ncol = 11)
 colnames(Table_TFR)  = c("Survey", "MP_users", "TFR_all", "TFR_all_LB", "TFR_all_UB", "TFR_sel", "TFR_sel_LB", "TFR_sel_UB", "TFR_post", "TFR_post_LB", "TFR_post_UB" )
 for (svy in DHS) {
   data                 = read.csv(paste0(pATh,"Data/",svy,".csv"))
-  freq                 = bootstrapping(data,c("strata", "cluster", "woman"),100)
+  freq                 = bootstrapping(data,c("strata", "cluster", "woman"),250)
   freq                 = freq[["W"]]
   W                    = matrix(data[["W"]], ncol = 1)
   WS                   = matrix(data[["W"]]*data[["mobile"]], ncol = 1)
@@ -92,4 +94,5 @@ for (svy in DHS) {
   
   Table_TFR            = rbind(Table_TFR, c(svy, mobile, all[["TFR"]], selected[["TFR"]], poststratified[["TFR"]]))
 }
+
 write_csv(data.frame(Table_TFR), paste0(pATh,"Table_TFR.csv"))

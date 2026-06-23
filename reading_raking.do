@@ -68,7 +68,7 @@ foreach svy of local DHS {
 		forvalues j = 1(1)5 {                                                   /*to fix misreported dates (e.g., Timor-Leste) or to deal with the Nepali calendar.*/
 			replace    B_`i'     = mdy(b1_`s',b17_`s' - `j',b2_`s') + `j' if B_`i' == .
 			}
-		replace    B_`i'     = mdy(b1_`s',15,b2_`s') if B_`i' == .              /*to impute day of birth in case it is not collected (e.g., Indonesia).*/
+		replace    B_`i'     = mdy(b1_`s',1,b2_`s') if B_`i' == .              /*to impute day of birth, if not collected (e.g., Indonesia).*/
 		}	
 	
 	local      vAr            = "caseid interview respondent UR Region DOB W cluster household strata Region UR Education Marital age ageG mobile wealth_index menarche_age any_usage modern_usage no_use_no_inte another_child fecund ideal_number B_*"
